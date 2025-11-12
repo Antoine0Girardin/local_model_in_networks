@@ -1,5 +1,0 @@
-21 distributions in the triangle with :
-state = phip
-measurement = RGB4 with u^2 in [0.5,1] (21 values)
-
-defined as in Tamas paper (A neural network oracle for quantum nonlocality problems in networks)
