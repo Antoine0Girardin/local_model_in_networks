@@ -188,43 +188,48 @@ def train_model_and_save(model, n_samples_in=None, n_training_steps=10000, model
                 loss.backward()
                 model.optimizer.step()
             
-            ## automatic change of the sampling (model.n_samples) with the loss
-            if loss < model.best_dist:
-                data, labels = generate_data(model.config, model.n_samples, model.target_distribution, model.opt)
-                data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
-                total_outputs = model(data)
-                reeval_loss, _= criterion(total_outputs, labels, compiled_distribution_function)
-                if reeval_loss < 1.1*loss:
-                    model.best_dist = (loss + reeval_loss)/2
-                    
-                    elapsed = t.format_dict['elapsed']
-                    elapsed_str = t.format_interval(elapsed)
         
-                    print(f"update model : dist ({model.dist}) =", np.around(float(loss), 5), "time ", elapsed_str, "n_samples", model.n_samples, "epoch", epoch)
-                    save_model_and_optimizer(model, model_path)
-                    n_epochs_no_update = 0
-                    
-                    #update the number of samples
-                    if n_samples_in is None:
-                        model.n_samples= sampling(loss, n_outputs, model.dist, bias, min_sampling, max_sampling)
-                
-            else:
-                ## reevaluation of the best model
-                n_epochs_no_update += 1
-                if n_epochs_no_update > n_steps_reevaluate:
-                    model.best_dist = evaluate_model_return_dist(model.n_samples, model, dist=model.dist)
-                    n_epochs_no_update = 0
-                    
-                    if bias<bias_max:
-                        bias+=1 #increase the sampling to end the training and making sure we are not under sampling
-                    print("reevaluation of the model : {}".format(model.best_dist))
+            model.eval()
+            with torch.no_grad():
+                ## automatic change of the sampling (model.n_samples) with the loss
+                if loss < model.best_dist:
+                    data, labels = generate_data(model.config, model.n_samples, model.target_distribution, model.opt)
+                    data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
+                    total_outputs = model(data)
+                    reeval_loss, _ = criterion(total_outputs, labels, compiled_distribution_function)
+                    if reeval_loss < 1.1*loss:
+                        model.best_dist = (loss + reeval_loss)/2
                         
-            if model.best_dist<threshold:
-                # model.best_dist = evaluate_model_return_dist(model, model_path, model.n_samples, model.target_distribution, model.opt, model.dist)
-                # print("reevaluation of the model because {}<{}: new evaluation = {}".format(loss, threshold, model.best_dist))
-                # if model.best_dist<threshold:
-                print("stopping the training: reached the threshold of {}".format(threshold))
-                break
+                        elapsed = t.format_dict['elapsed']
+                        elapsed_str = t.format_interval(elapsed)
+            
+                        print(f"update model : dist ({model.dist}) =", np.around(float(loss), 5), "time ", elapsed_str, "n_samples", model.n_samples, "epoch", epoch)
+                        save_model_and_optimizer(model, model_path)
+                        n_epochs_no_update = 0
+                        
+                        #update the number of samples
+                        if n_samples_in is None:
+                            model.n_samples= sampling(loss, n_outputs, model.dist, bias, min_sampling, max_sampling)
+                    
+                else:
+                    ## reevaluation of the best model
+                    n_epochs_no_update += 1
+                    if n_epochs_no_update > n_steps_reevaluate:
+                        model.best_dist = evaluate_model_return_dist(model.n_samples, model, dist=model.dist)
+                        n_epochs_no_update = 0
+                        
+                        if bias<bias_max:
+                            bias+=1 #increase the sampling to end the training and making sure we are not under sampling
+                        print("reevaluation of the model : {}".format(model.best_dist))
+
+                if model.best_dist<threshold:
+                    # model.best_dist = evaluate_model_return_dist(model, model_path, model.n_samples, model.target_distribution, model.opt, model.dist)
+                    # print("reevaluation of the model because {}<{}: new evaluation = {}".format(loss, threshold, model.best_dist))
+                    # if model.best_dist<threshold:
+                    print("stopping the training: reached the threshold of {}".format(threshold))
+                    break
+
+                # torch.cuda.empty_cache()
 
     try:
         print(f"Loss ({model.dist}): {model.best_dist}\n ")
@@ -338,13 +343,13 @@ def evaluate_model(n_samples, model=None, path=None):
 
     criterion = CustomLoss(model.config, dist=model.dist)
     model.eval() 
-    
-    data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
-    data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
+    with torch.no_grad():
+        data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
+        data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
 
-    total_outputs = model(data)
+        total_outputs = model(data)
 
-    d, predict = criterion(total_outputs, labels)
+        d, predict = criterion(total_outputs, labels)
     
     return d, predict
 
@@ -370,12 +375,13 @@ def evaluate_model_return_distribution(n_samples, model=None, path=None):
     criterion = CustomLoss(model.config, dist=model.dist)
     model.eval() 
     
-    data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
-    data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
+    with torch.no_grad():
+        data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
+        data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
 
-    total_outputs = model(data)
+        total_outputs = model(data)
 
-    d, predict = criterion(total_outputs, labels)
+        d, predict = criterion(total_outputs, labels)
     
     return predict.detach().cpu().numpy()
 
@@ -406,11 +412,12 @@ def evaluate_model_return_dist(n_samples, model=None, path=None, dist=None):
     criterion = CustomLoss(model.config, model.dist)
     model.eval() 
 
-    data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
-    data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
+    with torch.no_grad():
+        data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
+        data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
 
-    total_outputs = model(data)
-    d, predict = criterion(total_outputs, labels)
+        total_outputs = model(data)
+        d, predict = criterion(total_outputs, labels)
     return d
 
 
@@ -462,8 +469,9 @@ def plot_distribution(n_samples, model=None, path=None, dist=None, title_style=1
     data, labels = generate_data(model.config, n_samples, model.target_distribution, model.opt)
     data, labels = torch.tensor(data).to(device), torch.tensor(labels).to(device)
 
-    total_outputs = model(data)
-    d, predict = criterion(total_outputs, labels)
+    with torch.no_grad():
+        total_outputs = model(data)
+        d, predict = criterion(total_outputs, labels)
     
     
     plt.scatter(np.arange(len(predict)), predict.detach().numpy())
@@ -541,7 +549,6 @@ def output_model_separated(model, n_samples):
 
     with torch.no_grad(): 
         outputs = model(data)
-
 
     separated_outputs = []
     start_idx = 0
