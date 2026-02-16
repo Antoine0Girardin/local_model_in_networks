@@ -182,12 +182,10 @@ def train_model_and_save(model, n_samples_in=None, n_training_steps=10000, model
     
             total_outputs = model(data)
             model.optimizer.zero_grad()
-            loss, predict= criterion(total_outputs, labels, compiled_distribution_function)
+            loss, _ = criterion(total_outputs, labels, compiled_distribution_function)
             
-            if epoch != 0:
-                loss.backward()
-                model.optimizer.step()
-            
+            loss.backward()
+            model.optimizer.step()
         
             model.eval()
             with torch.no_grad():
