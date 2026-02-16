@@ -30,10 +30,10 @@ def compute_probs(source_tensor, list_povm, combinaisons_input, combinaisons_out
 
     # If a permutation is specified, apply it to the POVM tensor
     if tuple_info_povm is not None:
-        povm_tensor = povm_permut(*tuple_info_povm, povm_tensor)
+        povm_tensor = povm_permut(*tuple_info_povm, povm_tensor).full()
 
     # Calculate the probability by taking the trace of the product of the POVM tensor and the source tensor
-    return np.float32(np.round(np.trace(np.dot(povm_tensor, source_tensor)), 10))
+    return np.real(np.trace(np.dot(povm_tensor, source_tensor)))
 
 
 
