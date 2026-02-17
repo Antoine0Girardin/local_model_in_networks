@@ -44,12 +44,10 @@ if __name__=="__main__":
     # measurements = [get_measurement(0) for i in range(n_parties)]
     
     ## choose the permutation of the measurements and state (see documentation for examples)
-    permutation_povm =[0,1,2,3,4,5]
-    permutation_sources=[3,4,5,0,1,2]
-    permutation = [permutation_povm, permutation_sources]
+    order_sources=[3,4,5,0,1,2]
     
     ## compute the target distribution
-    target_distribution = quantum_network_fct(sources, measurements, permutation=permutation)
+    target_distribution = quantum_network_fct(sources, measurements, order_hs_sources=order_sources)
 
     ## save the target distribution in a file
     # name_distribution = "rgb4_umax.txt"

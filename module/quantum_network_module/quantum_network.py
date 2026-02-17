@@ -30,10 +30,10 @@ def compute_probs(source_tensor, list_povm, combinaisons_input, combinaisons_out
 
     # If a permutation is specified, apply it to the POVM tensor
     if tuple_info_povm is not None:
-        povm_tensor = povm_permut(*tuple_info_povm, povm_tensor)
+        povm_tensor = povm_permut(*tuple_info_povm, povm_tensor).full()
 
     # Calculate the probability by taking the trace of the product of the POVM tensor and the source tensor
-    return np.float32(np.round(np.trace(np.dot(povm_tensor, source_tensor)), 10))
+    return np.real(np.trace(np.dot(povm_tensor, source_tensor)))
 
 
 
@@ -83,7 +83,7 @@ def noise(rho, noise):
 
 
 
-def quantum_network_fct(source_dims_list, povm_matrices, permutation):
+def quantum_network_fct(source_dims_list, povm_matrices, order_hs_sources, order_hs_povms=None):
     """
     Calculates the probability distribution for a given quantum network.
 
@@ -95,15 +95,11 @@ def quantum_network_fct(source_dims_list, povm_matrices, permutation):
     Returns:
     - A list of probability distributions across the network based on the provided POVMs and source configuration.
     """
-
-    permutation_matrix = permutation[1]
-    print("Source permutation matrix:", permutation_matrix)
-
     # Assure all source dimensions are numpy arrays
     source_dims_list = assure_numpy_arrays(source_dims_list, "source")
 
     # Permute source tensors according to the permutation matrix
-    source_tensor_permut = sources_permut(permutation_matrix, source_dims_list)
+    source_tensor_permut = sources_permut(order_hs_sources, source_dims_list)
 
     # Generate all possible combinations of outcomes for the given POVMs
     combinations = possible_combinations_povm(povm_matrices)
@@ -112,10 +108,10 @@ def quantum_network_fct(source_dims_list, povm_matrices, permutation):
 
     input_dim_povm = generate_tensor_product_dims(source_dims_list)
 
-    permutation_povm = permutation[0]
-    tuple_info_povm = (permutation_povm, input_dim_povm)
+    if order_hs_povms is None:
+        order_hs_povms = sorted(order_hs_sources)
+    tuple_info_povm = (order_hs_povms, input_dim_povm)
 
-    print("POVM permutation matrix:", permutation_povm)
 
     # Calculate probabilities for each combination considering POVM permutations
     for combination in combinations:
